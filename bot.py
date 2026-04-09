@@ -7,15 +7,15 @@ from datetime import datetime
 from PIL import Image
 from PIL.ExifTags import TAGS
 import telebot
-from dotenv import load_dotenv
 
-# Загружаем только токен
-load_dotenv()
+# Просто берём токен из окружения
 TOKEN = os.getenv("BOT_TOKEN")
+if not TOKEN:
+    print("❌ BOT_TOKEN не найден! Установи переменную окружения BOT_TOKEN")
+    exit(1)
 
 bot = telebot.TeleBot(TOKEN)
 
-# ТВОЙ ВЕСЬ ПРИВЕТСТВЕННЫЙ АРТ
 WELCOME_TEXT = """
 ███████╗███████╗██████╗███████╗
 ██╔══██╗██╔════╝██╔══██╗██╔════╝
@@ -48,7 +48,6 @@ WELCOME_TEXT = """
 🐸 Только открытые источники. Без API Telegram.
 """
 
-# ========== ГЕНЕРАТОР HTML ==========
 def generate_pepe_html(data_type, query, data_dict):
     style = """
     <style>
@@ -77,7 +76,7 @@ def generate_pepe_html(data_type, query, data_dict):
     <head><meta charset="UTF-8">{style}</head>
     <body>
         <div class="container">
-            <h1 align="center">PEPE REPORT: {data_type}</h1>
+            <h1 align="center">🐸 PEPE REPORT: {data_type}</h1>
             <p align="center">TARGET: {query}</p>
             {sections}
             <div class="footer">PEPE_OSINT_ENGINE | {datetime.now().strftime('%Y-%m-%d %H:%M')}</div>
@@ -95,41 +94,53 @@ def send_full_report(chat_id, label, query, data):
         bot.send_document(chat_id, f, caption=f"🐸 Отчёт PepeOSINT по запросу: {query}")
     os.unlink(path)
 
-# ========== МОДУЛИ ФУНКЦИОНАЛА ==========
-
 def report_phone(phone):
     clean = re.sub(r'\D', '', phone)
-    # Здесь можно добавить свои API (LeakCheck и т.д.)
     return {
-        "СВЯЗЬ": {"Номер": phone, "Регион": "Pskov Oblast", "Оператор": "MegaFon"},
-        "АНТИСПАМ": {"Статус": "✅ Чисто"},
-        "МЕССЕНДЖЕРЫ": [f"WhatsApp: wa.me/{clean}", f"Telegram: t.me/+{clean}"]
+        "СВЯЗЬ": {"Номер": phone, "Регион": "Поиск...", "Оператор": "Определение..."},
+        "МЕССЕНДЖЕРЫ": [f"WhatsApp: wa.me/{clean}", f"Telegram: t.me/+{clean}"],
+        "СОВЕТ": "Для точных данных подключи API (LeakCheck, NumVerify)"
     }
 
 def report_vin(vin):
     try:
-        r = requests.get(f"https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/{vin}?format=json").json()
-        details = {d['Variable']: d['Value'] for d in r['Results'] if d['Value']}
+        r = requests.get(f"https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/{vin}?format=json", timeout=10).json()
+        details = {d['Variable']: d['Value'] for d in r['Results'][:10] if d.get('Value')}
         return {"VIN_DATA": details}
-    except: return {"ERROR": "Base unreachable"}
+    except:
+        return {"ERROR": "Сервер NHTSA недоступен"}
 
 def report_ip(ip):
     try:
-        return {"GEO": requests.get(f"http://ip-api.com/json/{ip}").json()}
-    except: return {"ERROR": "IP error"}
+        data = requests.get(f"http://ip-api.com/json/{ip}", timeout=10).json()
+        return {"GEO": data}
+    except:
+        return {"ERROR": "IP сервис недоступен"}
 
 def report_email(email):
     md5 = hashlib.md5(email.lower().encode()).hexdigest()
-    return {"INFO": {"MD5": md5}, "LINKS": [f"LeakCheck: leakcheck.net/search?check={email}"]}
+    return {
+        "GRAVATAR": f"https://www.gravatar.com/avatar/{md5}",
+        "LINKS": [f"LeakCheck: https://leakcheck.net/search?check={email}"]
+    }
 
 def report_crypto(addr):
-    return {"BLOCKCHAIN": {"Address": addr, "Explorer": f"blockchain.com/search?q={addr}"}}
+    if addr.startswith('0x') and len(addr) == 42:
+        url = f"https://etherscan.io/address/{addr}"
+    elif addr.startswith('1') or addr.startswith('3'):
+        url = f"https://www.blockchain.com/explorer/addresses/btc/{addr}"
+    else:
+        url = f"https://blockchair.com/search?q={addr}"
+    return {"BLOCKCHAIN": {"Address": addr, "Explorer": url}}
 
 def report_username(nick):
     u = nick.replace('@', '')
-    return {"SOCIAL": [f"GitHub: github.com/{u}", f"TikTok: tiktok.com/@{u}", f"Steam: steamcommunity.com/id/{u}"]}
-
-# ========== ОБРАБОТЧИКИ ==========
+    return {"SOCIAL": [
+        f"GitHub: https://github.com/{u}",
+        f"TikTok: https://tiktok.com/@{u}",
+        f"Steam: https://steamcommunity.com/id/{u}",
+        f"Twitter: https://twitter.com/{u}"
+    ]}
 
 @bot.message_handler(commands=['start'])
 def start_cmd(message):
@@ -144,38 +155,45 @@ def handle_exif(message):
         path = f.name
     try:
         img = Image.open(path)
-        exif = {TAGS.get(k, k): str(v) for k, v in img._getexif().items() if k in TAGS}
-        send_full_report(message.chat.id, "EXIF", "Image", {"METADATA": exif})
-    except: bot.send_message(message.chat.id, "🐸 Метаданные не найдены.")
-    finally: os.unlink(path)
+        exif_data = img._getexif()
+        if exif_data:
+            exif = {TAGS.get(k, k): str(v) for k, v in exif_data.items() if k in TAGS}
+            send_full_report(message.chat.id, "EXIF", "Image", {"METADATA": exif})
+        else:
+            bot.send_message(message.chat.id, "🐸 Метаданные не найдены.")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"🐸 Ошибка: {str(e)[:100]}")
+    finally:
+        os.unlink(path)
 
 @bot.message_handler(content_types=['text'])
 def main_router(message):
     text = message.text.strip()
     
-    # 1. Никнейм
     if text.startswith('@'):
         send_full_report(message.chat.id, "Username", text, report_username(text))
-    # 2. Номер
+    
     elif re.match(r'^\+?\d{10,15}$', text):
         send_full_report(message.chat.id, "Phone", text, report_phone(text))
-    # 3. Email
-    elif "@" in text and "." in text:
+    
+    elif "@" in text and "." in text and len(text) < 100:
         send_full_report(message.chat.id, "Email", text, report_email(text))
-    # 4. VIN
-    elif len(text) == 17 and text.isalnum():
+    
+    elif len(text) == 17 and text.isalnum() and any(c.isdigit() for c in text) and any(c.isalpha() for c in text):
         send_full_report(message.chat.id, "VIN", text.upper(), report_vin(text.upper()))
-    # 5. IP
+    
     elif re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', text):
         send_full_report(message.chat.id, "IP", text, report_ip(text))
-    # 6. Крипто
-    elif (len(text) > 25 and not "@" in text):
+    
+    elif (text.startswith('0x') and len(text) == 42) or (text.startswith('1') and len(text) in [34, 42]):
         send_full_report(message.chat.id, "Crypto", text, report_crypto(text))
-    # 7. ФИО
-    elif len(text.split()) >= 2:
-        send_full_report(message.chat.id, "ФИО", text, {"Search": [f"Google: google.com/search?q={text}", f"VK: vk.com/people/{text}"]})
+    
+    elif len(text.split()) >= 2 and len(text) < 50:
+        send_full_report(message.chat.id, "ФИО", text, {"Поиск": [f"Google: https://google.com/search?q={text}", f"VK: https://vk.com/people/{text}"]})
+    
     else:
-        bot.reply_to(message, "🐸 Жаба не понимает формат. Попробуй еще раз.")
+        bot.reply_to(message, "🐸 Жаба не понимает формат.\nПопробуй: номер, @username, email, VIN (17 символов), IP, или криптоадрес.")
 
 if __name__ == "__main__":
+    print("🐸 PEPE OSINT BOT запущен!")
     bot.infinity_polling()
