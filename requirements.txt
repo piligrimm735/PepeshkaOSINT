@@ -1,4 +1,4 @@
-pyTelegramBotAPI
-requests
-beautifulsoup4
-python-dotenv
+pyTelegramBotAPI==4.32.0
+requests==2.32.3
+beautifulsoup4==4.12.3
+python-dotenv==1.0.1
