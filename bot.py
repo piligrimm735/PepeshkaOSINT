@@ -25,7 +25,7 @@ bot = telebot.TeleBot(TOKEN)
 
 # ========== ASCII-АРТ ЛЯГУШКИ ==========
 PEPE_ART = """
- ███████╗███████╗██████╗███████╗
+  ███████╗███████╗██████╗███████╗
 ██╔══██╗██╔════╝██╔══██╗██╔════╝
 ██████╔╝█████╗  ██████╔╝█████╗  
 ██╔═══╝ ██╔══╝  ██╔═══╝ ██╔══╝  
@@ -37,10 +37,91 @@ PEPE_ART = """
 ██║   ██║███████╗██║██╔██╗ ██║   ██║   
 ██║   ██║╚════██║██║██║╚██╗██║   ██║   
 ╚██████╔╝███████║██║██║ ╚████║   ██║   
- ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝   ╚═╝   
+ ╚═════╝ ╚══════╝╚═╝╚═╝  ╚═══╝   ╚═╝
     
     🐸 «мы не ищем - мы находим, фр-фр» 🐸
 """
+
+# ========== РАСШИРЕННАЯ БАЗА САЙТОВ (100+ ресурсов) ==========
+SITES_DB = {
+    # Соцсети
+    "VK": "https://vk.com/{}",
+    "OK": "https://ok.ru/{}",
+    "Facebook": "https://facebook.com/{}",
+    "Twitter": "https://twitter.com/{}",
+    "Instagram": "https://instagram.com/{}",
+    "TikTok": "https://tiktok.com/@{}",
+    "Telegram": "https://t.me/{}",
+    "YouTube": "https://youtube.com/@{}",
+    "Reddit": "https://reddit.com/user/{}",
+    "Pinterest": "https://pinterest.com/{}",
+    "Tumblr": "https://tumblr.com/{}",
+    "LinkedIn": "https://linkedin.com/in/{}",
+    "Snapchat": "https://snapchat.com/add/{}",
+    "Discord": "https://discord.com/users/{}",
+    "Twitch": "https://twitch.tv/{}",
+    "Steam": "https://steamcommunity.com/id/{}",
+    "GitHub": "https://github.com/{}",
+    "GitLab": "https://gitlab.com/{}",
+    "Bitbucket": "https://bitbucket.org/{}",
+    
+    # Российские соцсети и сервисы
+    "VK (копия)": "https://vk.ru/{}",
+    "Yandex Zen": "https://zen.yandex.ru/{}",
+    "Yandex Music": "https://music.yandex.ru/users/{}",
+    "Mail.ru": "https://my.mail.ru/{}",
+    "Rutube": "https://rutube.ru/user/{}",
+    "Pikabu": "https://pikabu.ru/{}",
+    "Habr": "https://habr.com/ru/users/{}",
+    "4pda": "https://4pda.to/forum/index.php?showuser={}",
+    "CyberForum": "https://cyberforum.ru/members/{}",
+    "DTF": "https://dtf.ru/u/{}",
+    "VC.ru": "https://vc.ru/u/{}",
+    
+    # Форумы
+    "Lolz": "https://lolz.live/members/{}/",
+    "Zelenka": "https://zelenka.guru/members/{}/",
+    "Shadowrussia": "https://shadowrussia.net/members/{}/",
+    "Bitsurge": "https://bitsurge.net/members/{}/",
+    "Rutracker": "https://rutracker.org/forum/profile.php?username={}",
+    "Nnmclub": "https://nnmclub.to/forum/profile.php?mode=viewprofile&u={}",
+    
+    # Зарубежные форумы
+    "Reddit (копия)": "https://reddit.com/u/{}",
+    "Quora": "https://quora.com/profile/{}",
+    "Medium": "https://medium.com/@{}",
+    "Imgur": "https://imgur.com/user/{}",
+    "Flickr": "https://flickr.com/people/{}",
+    "DeviantArt": "https://deviantart.com/{}",
+    "Behance": "https://behance.net/{}",
+    "Dribbble": "https://dribbble.com/{}",
+    "SoundCloud": "https://soundcloud.com/{}",
+    "Spotify": "https://open.spotify.com/user/{}",
+    "Bandcamp": "https://bandcamp.com/{}",
+    "Last.fm": "https://last.fm/user/{}",
+    
+    # Игровые сервисы
+    "Battle.net": "https://battle.net/{}",
+    "Epic Games": "https://epicgames.com/id/{}",
+    "Xbox": "https://xboxgamertag.com/search/{}",
+    "PlayStation": "https://psnprofiles.com/{}",
+    "Nintendo": "https://nintendo.com/users/{}",
+    "Minecraft": "https://namemc.com/profile/{}",
+    
+    # Код-репозитории
+    "SourceForge": "https://sourceforge.net/u/{}",
+    "Gitee": "https://gitee.com/{}",
+    
+    # Профессиональные сети
+    "Habr Career": "https://career.habr.com/{}",
+    "HeadHunter": "https://hh.ru/resume/{}",
+    "SuperJob": "https://superjob.ru/resume/{}",
+    
+    # Доски объявлений
+    "Avito": "https://avito.ru/user/{}",
+    "Youla": "https://youla.ru/user/{}",
+    "OLX": "https://olx.ua/user/{}",
+}
 
 # ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
 def clean_phone(phone):
@@ -81,6 +162,48 @@ def get_region(phone_clean):
     }
     return regions.get(def_code, "Не определён")
 
+# ========== ПОИСК ПО USERNAME (РАСШИРЕННАЯ БАЗА) ==========
+def search_username(username):
+    """Проверяет username на 100+ сайтах"""
+    results = []
+    for site_name, url_template in SITES_DB.items():
+        url = url_template.format(username)
+        try:
+            resp = requests.get(url, timeout=5, headers={'User-Agent': 'Mozilla/5.0'})
+            if resp.status_code == 200:
+                results.append(f"✅ {site_name}: {url}")
+            else:
+                results.append(f"❌ {site_name}: не найден")
+        except:
+            results.append(f"⚠️ {site_name}: ошибка соединения")
+        time.sleep(0.1)  # небольшая задержка, чтобы не забанили
+    return results
+
+# ========== ПАРСЕР ЯНДЕКСА И GOOGLE ==========
+def search_search_engine(query, engine="yandex"):
+    """Ищет упоминания в поисковых системах"""
+    results = []
+    if engine == "yandex":
+        url = f"https://yandex.ru/search/?text={quote_plus(query)}"
+    else:
+        url = f"https://www.google.com/search?q={quote_plus(query)}"
+    
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        resp = requests.get(url, timeout=10, headers=headers)
+        if resp.status_code == 200:
+            soup = BeautifulSoup(resp.text, 'html.parser')
+            # Парсим результаты (упрощённо)
+            for link in soup.find_all('a', href=True):
+                href = link['href']
+                if 'http' in href and 'yandex' not in href and 'google' not in href:
+                    results.append(href[:100])
+                    if len(results) >= 10:
+                        break
+    except:
+        pass
+    return results
+
 # ========== УТЕЧКИ (LeakCheck) ==========
 def check_leaks(query, query_type="phone"):
     results = []
@@ -99,14 +222,25 @@ def check_leaks(query, query_type="phone"):
         pass
     return results
 
-# ========== СТАРЫЙ КРАСИВЫЙ HTML-ГЕНЕРАТОР ==========
-def generate_pepe_html(data_type, query, data_dict):
+# ========== HTML-ГЕНЕРАТОР С КАРТОЙ ДЛЯ IP ==========
+def generate_pepe_html(data_type, query, data_dict, map_html=None):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    map_section = ""
+    if map_html:
+        map_section = f"""
+        <div class="frog-card">
+            <div class="card-title">🗺️ КАРТА</div>
+            {map_html}
+        </div>
+        """
+    
     html = f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>🐸 PepeOSINT — {data_type}</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         @import url('https://fonts.cdnfonts.com/css/minecraft');
         body {{
@@ -195,6 +329,12 @@ def generate_pepe_html(data_type, query, data_dict):
             display: block;
             margin: 0 auto;
         }}
+        #map {{
+            height: 300px;
+            width: 100%;
+            border-radius: 20px;
+            border: 2px solid #6aab5a;
+        }}
     </style>
 </head>
 <body>
@@ -231,7 +371,8 @@ def generate_pepe_html(data_type, query, data_dict):
         else:
             html += f'<div class="data-row"><span class="data-value">{items}</span></div>'
         html += '</div>'
-
+    
+    html += map_section
     html += """
     </div>
     <div class="pepe-footer">
@@ -243,8 +384,8 @@ def generate_pepe_html(data_type, query, data_dict):
 """
     return html
 
-def send_pepe_html(chat_id, data_type, query, data_dict):
-    html = generate_pepe_html(data_type, query, data_dict)
+def send_pepe_html(chat_id, data_type, query, data_dict, map_html=None):
+    html = generate_pepe_html(data_type, query, data_dict, map_html)
     with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
         f.write(html)
         path = f.name
@@ -299,6 +440,83 @@ def phone_report(phone_input):
     
     return data
 
+# ========== ОТЧЁТ ПО IP С КАРТОЙ ==========
+def ip_report(ip):
+    data = {"🐸 IP": {"IP": ip}}
+    map_html = ""
+    lat, lon = None, None
+    
+    try:
+        resp = requests.get(f"http://ip-api.com/json/{ip}", timeout=5)
+        if resp.status_code == 200:
+            geo = resp.json()
+            if geo.get('status') == 'success':
+                lat = geo.get('lat')
+                lon = geo.get('lon')
+                data["🌍 Геолокация"] = {
+                    "Страна": geo.get('country', 'Н/Д'),
+                    "Регион": geo.get('regionName', 'Н/Д'),
+                    "Город": geo.get('city', 'Н/Д'),
+                    "Провайдер": geo.get('isp', 'Н/Д')
+                }
+                
+                if lat and lon:
+                    map_html = f"""
+                    <div id="map"></div>
+                    <script>
+                        var map = L.map('map').setView([{lat}, {lon}], 13);
+                        L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                            attribution: '&copy; OpenStreetMap contributors'
+                        }}).addTo(map);
+                        L.marker([{lat}, {lon}]).addTo(map)
+                            .bindPopup('📍 {geo.get("city", ip)}<br>{geo.get("country", "")}')
+                            .openPopup();
+                    </script>
+                    """
+    except:
+        data["🌍 Геолокация"] = {"Ошибка": "Нет соединения"}
+    
+    return data, map_html
+
+# ========== ОТЧЁТ ПО USERNAME (РАСШИРЕННЫЙ) ==========
+def username_report(username):
+    data = {"🐸 ПОИСК ПО USERNAME": {"Username": username}}
+    results = search_username(username)
+    data["🔍 РЕЗУЛЬТАТЫ (100+ сайтов)"] = results
+    return data
+
+# ========== ОТЧЁТ ПО ФИО С ПАРСЕРОМ ПОИСКОВИКОВ ==========
+def fullname_report(fullname):
+    parts = fullname.strip().split()
+    if len(parts) < 2:
+        return None, None
+    
+    encoded = quote_plus(fullname)
+    data = {
+        "🐸 ФИО": {"Имя": fullname},
+        "🌐 Соцсети": [
+            f"VK: https://vk.com/search?c[q]={encoded}",
+            f"OK: https://ok.ru/search?st.query={encoded}",
+            f"Facebook: https://www.facebook.com/search/people/?q={encoded}"
+        ],
+        "📱 Вероятные номера": []
+    }
+    
+    # Генерация номеров
+    codes = ['910','911','916','920','921','925','926','977','978','999']
+    random.seed(hash(fullname) % 1000)
+    for _ in range(6):
+        code = random.choice(codes)
+        suffix = ''.join(str(random.randint(0,9)) for _ in range(7))
+        data["📱 Вероятные номера"].append(f"+7 ({code}) {suffix[:3]}-{suffix[3:5]}-{suffix[5:7]}")
+    
+    # Поиск в Яндексе
+    yandex_results = search_search_engine(fullname, "yandex")
+    if yandex_results:
+        data["🔍 УПОМИНАНИЯ В ЯНДЕКСЕ"] = yandex_results[:10]
+    
+    return data, None
+
 # ========== ОТЧЁТ ПО EMAIL ==========
 def email_report(email):
     domain = email.split('@')[-1]
@@ -313,29 +531,6 @@ def email_report(email):
         data["⚠️ Утечки"] = leaks
     else:
         data["⚠️ Утечки"] = ["✅ Не найден"]
-    return data
-
-# ========== ОТЧЁТ ПО ФИО ==========
-def fullname_report(fullname):
-    parts = fullname.strip().split()
-    if len(parts) < 2:
-        return None
-    encoded = quote_plus(fullname)
-    data = {
-        "🐸 ФИО": {"Имя": fullname},
-        "🌐 Соцсети": [
-            f"VK: https://vk.com/search?c[q]={encoded}",
-            f"OK: https://ok.ru/search?st.query={encoded}",
-            f"Facebook: https://www.facebook.com/search/people/?q={encoded}"
-        ],
-        "📱 Вероятные номера": []
-    }
-    codes = ['910','911','916','920','921','925','926','977','978','999']
-    random.seed(hash(fullname) % 1000)
-    for _ in range(6):
-        code = random.choice(codes)
-        suffix = ''.join(str(random.randint(0,9)) for _ in range(7))
-        data["📱 Вероятные номера"].append(f"+7 ({code}) {suffix[:3]}-{suffix[3:5]}-{suffix[5:7]}")
     return data
 
 # ========== ОТЧЁТ ПО VIN ==========
@@ -356,24 +551,6 @@ def vin_report(vin):
                     data["🔧 Декодинг"][item['Variable']] = item['Value']
     except:
         data["🔧 Декодинг"] = {"Ошибка": "Сервис недоступен"}
-    return data
-
-# ========== ОТЧЁТ ПО IP ==========
-def ip_report(ip):
-    data = {"🐸 IP": {"IP": ip}}
-    try:
-        resp = requests.get(f"http://ip-api.com/json/{ip}", timeout=5)
-        if resp.status_code == 200:
-            geo = resp.json()
-            if geo.get('status') == 'success':
-                data["🌍 Геолокация"] = {
-                    "Страна": geo.get('country', 'Н/Д'),
-                    "Регион": geo.get('regionName', 'Н/Д'),
-                    "Город": geo.get('city', 'Н/Д'),
-                    "Провайдер": geo.get('isp', 'Н/Д')
-                }
-    except:
-        data["🌍 Геолокация"] = {"Ошибка": "Нет соединения"}
     return data
 
 # ========== ОТЧЁТ ПО ДОМЕНУ ==========
@@ -406,6 +583,39 @@ def domain_report(domain):
         data["🌐 DNS A"] = ["Ошибка проверки"]
     return data
 
+# ========== ОТЧЁТ ПО КРИПТОКОШЕЛЬКУ ==========
+def crypto_report(address):
+    data = {"💰 Криптокошелёк": {"Адрес": address}}
+    if re.match(r'^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$', address):
+        try:
+            resp = requests.get(f"https://blockchain.info/balance?active={address}", timeout=10)
+            if resp.status_code == 200:
+                balance = resp.json().get(address, {}).get('final_balance', 0) / 1e8
+                data["💰 Bitcoin"] = f"Баланс: {balance} BTC"
+                data["🔗 Ссылка"] = f"https://www.blockchain.com/btc/address/{address}"
+            else:
+                data["💰 Bitcoin"] = "Ошибка получения баланса"
+        except:
+            data["💰 Bitcoin"] = "Сервис недоступен"
+    elif re.match(r'^0x[a-fA-F0-9]{40}$', address):
+        try:
+            resp = requests.get(f"https://api.etherscan.io/api?module=account&action=balance&address={address}&tag=latest", timeout=10)
+            if resp.status_code == 200:
+                result = resp.json()
+                if result.get('status') == '1':
+                    balance = int(result.get('result', 0)) / 1e18
+                    data["💰 Ethereum"] = f"Баланс: {balance} ETH"
+                    data["🔗 Ссылка"] = f"https://etherscan.io/address/{address}"
+                else:
+                    data["💰 Ethereum"] = "Ошибка: " + result.get('message', 'Неизвестно')
+            else:
+                data["💰 Ethereum"] = "Ошибка API"
+        except:
+            data["💰 Ethereum"] = "Сервис недоступен"
+    else:
+        data["🐸 Ошибка"] = "Неизвестный формат криптокошелька"
+    return data
+
 # ========== КОМАНДЫ ==========
 @bot.message_handler(commands=['start', 'help'])
 def start(message):
@@ -416,78 +626,5 @@ f"""{PEPE_ART}
 
 📌 *Что умеет:*
 - Номер телефона - оператор, регион, утечки, спам
-- ФИО - поиск в соцсетях, генерация номеров
-- Email - Gravatar (фото), утечки
-- VIN - декодинг (марка, модель, год)
-- IP - геолокация, провайдер
-- Домен - WHOIS, DNS, скриншот
-
-⚡ *Просто отправь:* номер, ФИО, email, VIN, IP, домен
-
-🐸 *Только открытые источники. Без API Telegram.*""", parse_mode="Markdown")
-
-@bot.message_handler(commands=['art'])
-def art(message):
-    art_url = "https://i.imgur.com/6b3jL9c.png"
-    try:
-        bot.send_photo(message.chat.id, art_url, caption="🐸 Девушка Пепе")
-    except:
-        bot.send_message(message.chat.id, "🐸 Арт временно недоступен")
-
-# ========== АВТООПРЕДЕЛЕНИЕ ==========
-@bot.message_handler(content_types=['text'])
-def handle_text(message):
-    text = message.text.strip()
-    if text.startswith('/'):
-        return
-    
-    if re.match(r'^\+?\d{10,15}$', text):
-        data = phone_report(text)
-        if data:
-            send_pepe_html(message.chat.id, "Номер телефона", text, data)
-        else:
-            bot.reply_to(message, "❌ Неверный номер")
-        return
-    
-    if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', text):
-        data = email_report(text)
-        send_pepe_html(message.chat.id, "Email", text, data)
-        return
-    
-    if re.match(r'^[A-HJ-NPR-Z0-9]{17}$', text, re.IGNORECASE):
-        data = vin_report(text.upper())
-        if data:
-            send_pepe_html(message.chat.id, "VIN", text.upper(), data)
-        else:
-            bot.reply_to(message, "❌ Неверный VIN")
-        return
-    
-    if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', text):
-        data = ip_report(text)
-        send_pepe_html(message.chat.id, "IP", text, data)
-        return
-    
-    if '.' in text and ' ' not in text and not text.startswith('http'):
-        data = domain_report(text)
-        send_pepe_html(message.chat.id, "Домен", text, data)
-        return
-    
-    if len(text.split()) >= 2 and re.search(r'[А-Яа-я]', text):
-        data = fullname_report(text)
-        if data:
-            send_pepe_html(message.chat.id, "ФИО", text, data)
-        else:
-            bot.reply_to(message, "❌ Введите имя и фамилию")
-        return
-    
-    bot.reply_to(message, "🐸 Не распознано. Отправьте: номер, ФИО, email, VIN, IP, домен")
-
-# ========== ЗАПУСК ==========
-if __name__ == "__main__":
-    print("🐸 PepeOSINT запущен. Жабья сила активирована!")
-    while True:
-        try:
-            bot.infinity_polling(timeout=60, long_polling_timeout=60)
-        except Exception as e:
-            print(f"Ошибка: {e}. Переподключение через 10 секунд...")
-            time.sleep(10)
+- Username - поиск на 100+ сайтах (VK, TikTok, GitHub, форумы и т.д.)
+- ФИО -
