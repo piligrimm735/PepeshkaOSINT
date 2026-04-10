@@ -7,11 +7,8 @@ import time
 import os
 import random
 import tempfile
-import csv
 from urllib.parse import quote_plus
 from datetime import datetime
-from io import BytesIO, StringIO
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 # ========== ЗАГРУЗКА ПЕРЕМЕННЫХ ==========
@@ -56,6 +53,25 @@ SITES_DB = {
     "Imgur": "https://imgur.com/user/{}",
     "Flickr": "https://flickr.com/people/{}",
     "DeviantArt": "https://deviantart.com/{}",
+    "Codeforces": "https://codeforces.com/profile/{}",
+    "Chess.com": "https://chess.com/member/{}",
+    "Spotify": "https://open.spotify.com/user/{}",
+    "Discord": "https://discord.com/users/{}",
+    "Twitch": "https://twitch.tv/{}",
+    "ProductHunt": "https://producthunt.com/@{}",
+    "AngelList": "https://angel.co/u/{}",
+    "Kaggle": "https://kaggle.com/{}",
+    "LeetCode": "https://leetcode.com/{}",
+    "HackerRank": "https://hackerrank.com/{}",
+    "CodePen": "https://codepen.io/{}",
+    "Replit": "https://replit.com/@{}",
+    "Figma": "https://figma.com/@{}",
+    "DockerHub": "https://hub.docker.com/u/{}",
+    "PyPI": "https://pypi.org/user/{}",
+    "NPM": "https://npmjs.com/~{}",
+    "RubyGems": "https://rubygems.org/profiles/{}",
+    "Packagist": "https://packagist.org/users/{}",
+    "Crates.io": "https://crates.io/users/{}",
 }
 
 # ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
@@ -115,7 +131,7 @@ def check_leaks(query, query_type="phone"):
         pass
     return results
 
-# ========== HTML-ГЕНЕРАТОР С ВИЗУАЛАМИ (MINECRAFT ШРИФТ, СЕТКА, СТИЛЬ) ==========
+# ========== HTML-ГЕНЕРАТОР ==========
 def generate_pepe_html(data_type, query, data_dict):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     html = f"""<!DOCTYPE html>
@@ -196,6 +212,9 @@ def generate_pepe_html(data_type, query, data_dict):
         .link-list {{ list-style: none; margin-top: 0.5rem; }}
         .link-list li {{ margin: 0.6rem 0; word-break: break-all; }}
         .link-list a {{ color: #aaffaa; text-decoration: none; border-bottom: 1px dotted #6aff6a; }}
+        .status-ok {{ color: #6eff6e; }}
+        .status-bad {{ color: #ff6e6e; }}
+        .status-warn {{ color: #ffb86e; }}
         .pepe-footer {{
             text-align: center;
             margin-top: 3rem;
@@ -203,13 +222,6 @@ def generate_pepe_html(data_type, query, data_dict):
             font-size: 0.75rem;
             color: #6e9e6e;
             border-top: 1px solid #3a6a3a;
-        }}
-        .avatar-img {{
-            max-width: 100px;
-            border-radius: 50%;
-            border: 2px solid #6aab5a;
-            display: block;
-            margin: 0 auto;
         }}
     </style>
 </head>
@@ -232,15 +244,23 @@ def generate_pepe_html(data_type, query, data_dict):
             html += '<ul class="link-list">'
             for item in items:
                 if isinstance(item, str) and ('http' in item or '://' in item):
-                    html += f'<li>🐸 <a href="{item}" target="_blank">{item}</a></li>'
+                    if '✅' in item:
+                        html += f'<li><span class="status-ok">✅</span> <a href="{item.split(": ")[1]}" target="_blank">{item.split(": ")[1]}</a></li>'
+                    elif '❌' in item:
+                        html += f'<li><span class="status-bad">❌</span> {item[3:]}</li>'
+                    else:
+                        html += f'<li>🐸 <a href="{item}" target="_blank">{item}</a></li>'
                 else:
-                    html += f'<li>- {item}</li>'
+                    if '✅' in item:
+                        html += f'<li><span class="status-ok">✅</span> {item[3:]}</li>'
+                    elif '❌' in item:
+                        html += f'<li><span class="status-bad">❌</span> {item[3:]}</li>'
+                    else:
+                        html += f'<li>- {item}</li>'
             html += '</ul>'
         elif isinstance(items, dict):
             for label, value in items.items():
-                if label == "Аватар":
-                    html += f'<div class="data-row"><span class="data-label">{label}:</span><span class="data-value"><img src="{value}" class="avatar-img"></span></div>'
-                elif value and isinstance(value, str) and ('http' in value or '://' in value):
+                if value and isinstance(value, str) and ('http' in value or '://' in value):
                     html += f'<div class="data-row"><span class="data-label">{label}:</span><span class="data-value"><a href="{value}" target="_blank">{value}</a></span></div>'
                 else:
                     html += f'<div class="data-row"><span class="data-label">{label}:</span><span class="data-value">{value or "-"}</span></div>'
@@ -283,51 +303,63 @@ def phone_report(phone_input):
         },
         "⚠️ Утечки (LeakCheck)": [],
         "🐸 Спам-статус": "",
-        "🌐 Соцсети": []
+        "🌐 Поиск по соцсетям": []
     }
     
     leaks = check_leaks(phone_clean, "phone")
     if leaks:
         data["⚠️ Утечки (LeakCheck)"] = leaks
     else:
-        data["⚠️ Утечки (LeakCheck)"] = ["✅ Не найден"]
+        data["⚠️ Утечки (LeakCheck)"] = ["✅ Не найден в публичных утечках"]
     
     try:
         resp = requests.get(f"https://api.phonespam.info/phone/{phone_clean}", timeout=5)
         if resp.status_code == 200:
             spam_data = resp.json()
-            data["🐸 Спам-статус"] = "🚫 Спам" if spam_data.get('spam') else "✅ Чисто"
+            data["🐸 Спам-статус"] = "🚫 Отмечался как спам" if spam_data.get('spam') else "✅ Чистый номер"
         else:
-            data["🐸 Спам-статус"] = "❓ Недоступно"
+            data["🐸 Спам-статус"] = "❓ Сервис недоступен"
     except:
-        data["🐸 Спам-статус"] = "❓ Ошибка"
+        data["🐸 Спам-статус"] = "❓ Ошибка проверки"
     
-    data["🌐 Соцсети"] = [
-        f"VK: https://vk.com/search?c[phone]={phone_clean}",
-        f"OK: https://ok.ru/search?st.query={phone_clean}",
-        f"Facebook: https://www.facebook.com/search/top/?q={phone_clean}",
-        f"WhatsApp: https://wa.me/{phone_clean}",
-        f"Truecaller: https://www.truecaller.com/search/global/{phone_clean}"
+    # Ссылки для ПОИСКА по номеру (не прямые профили!)
+    data["🌐 Поиск по соцсетям"] = [
+        f"🔍 VK: https://vk.com/search?c[phone]={phone_clean}",
+        f"🔍 OK: https://ok.ru/search?st.query={phone_clean}",
+        f"🔍 Facebook: https://www.facebook.com/search/top/?q={phone_clean}",
+        f"📱 WhatsApp: https://wa.me/{phone_clean}",
+        f"📞 Truecaller: https://www.truecaller.com/search/global/{phone_clean}"
     ]
     
     return data
 
-# ========== ПОИСК ПО USERNAME (100+ САЙТОВ) ==========
+# ========== ПОИСК ПО USERNAME (прямые ссылки на профили) ==========
 def username_report(username):
-    data = {"🐸 ПОИСК ПО USERNAME": {"Username": username}}
+    data = {"🐸 ЦЕЛЬ": {"Username": username}}
     results = []
+    found_count = 0
+    
     for site_name, url_template in SITES_DB.items():
         url = url_template.format(username)
         try:
-            resp = requests.get(url, timeout=5, headers={'User-Agent': 'Mozilla/5.0'})
+            resp = requests.get(url, timeout=5, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
             if resp.status_code == 200:
                 results.append(f"✅ {site_name}: {url}")
+                found_count += 1
+            elif resp.status_code == 404:
+                results.append(f"❌ {site_name}: профиль не найден")
             else:
-                results.append(f"❌ {site_name}: не найден")
-        except:
+                results.append(f"⚠️ {site_name}: код {resp.status_code}")
+        except requests.exceptions.Timeout:
+            results.append(f"⚠️ {site_name}: таймаут")
+        except requests.exceptions.ConnectionError:
+            results.append(f"⚠️ {site_name}: ошибка соединения")
+        except Exception as e:
             results.append(f"⚠️ {site_name}: ошибка")
         time.sleep(0.1)
-    data["🔍 РЕЗУЛЬТАТЫ (100+ сайтов)"] = results
+    
+    data["🔍 РЕЗУЛЬТАТЫ"] = results
+    data["📊 СТАТИСТИКА"] = f"Найдено профилей: {found_count} / {len(SITES_DB)}"
     return data
 
 # ========== ОТЧЁТ ПО EMAIL ==========
@@ -343,7 +375,7 @@ def email_report(email):
     if leaks:
         data["⚠️ Утечки"] = leaks
     else:
-        data["⚠️ Утечки"] = ["✅ Не найден"]
+        data["⚠️ Утечки"] = ["✅ Email не найден в публичных утечках"]
     return data
 
 # ========== ОТЧЁТ ПО ФИО ==========
@@ -354,19 +386,19 @@ def fullname_report(fullname):
     encoded = quote_plus(fullname)
     data = {
         "🐸 ФИО": {"Имя": fullname},
-        "🌐 Соцсети": [
-            f"VK: https://vk.com/search?c[q]={encoded}",
-            f"OK: https://ok.ru/search?st.query={encoded}",
-            f"Facebook: https://www.facebook.com/search/people/?q={encoded}"
+        "🌐 Поиск в соцсетях": [
+            f"🔍 VK: https://vk.com/search?c[q]={encoded}",
+            f"🔍 OK: https://ok.ru/search?st.query={encoded}",
+            f"🔍 Facebook: https://www.facebook.com/search/people/?q={encoded}"
         ],
-        "📱 Вероятные номера": []
+        "📱 Вероятные номера (генерация)": []
     }
     codes = ['910','911','916','920','921','925','926','977','978','999']
     random.seed(hash(fullname) % 1000)
     for _ in range(6):
         code = random.choice(codes)
         suffix = ''.join(str(random.randint(0,9)) for _ in range(7))
-        data["📱 Вероятные номера"].append(f"+7 ({code}) {suffix[:3]}-{suffix[3:5]}-{suffix[5:7]}")
+        data["📱 Вероятные номера (генерация)"].append(f"+7 ({code}) {suffix[:3]}-{suffix[3:5]}-{suffix[5:7]}")
     return data
 
 # ========== ОТЧЁТ ПО VIN ==========
@@ -377,21 +409,24 @@ def vin_report(vin):
     data = {
         "🚗 VIN": {"VIN": vin},
         "🔧 Декодинг": {},
-        "🔗 История": f"https://vincheck.info/check/{vin}"
+        "🔗 Проверить историю": f"https://vincheck.info/check/{vin}"
     }
     try:
         resp = requests.get(f"https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/{vin}?format=json", timeout=10)
         if resp.status_code == 200:
             for item in resp.json().get('Results', []):
-                if item['Variable'] in ['Make', 'Model', 'ModelYear', 'VehicleType']:
-                    data["🔧 Декодинг"][item['Variable']] = item['Value']
+                if item['Variable'] in ['Make', 'Model', 'ModelYear', 'VehicleType', 'EngineCylinders']:
+                    if item['Value']:
+                        data["🔧 Декодинг"][item['Variable']] = item['Value']
+            if not data["🔧 Декодинг"]:
+                data["🔧 Декодинг"] = {"Информация": "Данные не найдены"}
     except:
-        data["🔧 Декодинг"] = {"Ошибка": "Сервис недоступен"}
+        data["🔧 Декодинг"] = {"Ошибка": "Сервис временно недоступен"}
     return data
 
 # ========== ОТЧЁТ ПО IP ==========
 def ip_report(ip):
-    data = {"🐸 IP": {"IP": ip}}
+    data = {"🐸 IP-адрес": {"IP": ip}}
     try:
         resp = requests.get(f"http://ip-api.com/json/{ip}", timeout=5)
         if resp.status_code == 200:
@@ -401,8 +436,11 @@ def ip_report(ip):
                     "Страна": geo.get('country', 'Н/Д'),
                     "Регион": geo.get('regionName', 'Н/Д'),
                     "Город": geo.get('city', 'Н/Д'),
-                    "Провайдер": geo.get('isp', 'Н/Д')
+                    "Провайдер": geo.get('isp', 'Н/Д'),
+                    "Координаты": f"{geo.get('lat', 'Н/Д')}, {geo.get('lon', 'Н/Д')}"
                 }
+            else:
+                data["🌍 Геолокация"] = {"Ошибка": "IP не найден"}
     except:
         data["🌍 Геолокация"] = {"Ошибка": "Нет соединения"}
     return data
@@ -412,8 +450,8 @@ def domain_report(domain):
     data = {
         "🐸 Домен": {"Домен": domain},
         "📋 WHOIS": {},
-        "🌐 DNS A": [],
-        "📸 Скриншот": f"https://mini.s-shot.ru/1024x768/PNG/?url={quote_plus(domain)}"
+        "🌐 DNS A записи": [],
+        "📸 Скриншот сайта": f"https://mini.s-shot.ru/1024x768/PNG/?url={quote_plus(domain)}"
     }
     try:
         resp = requests.get(f"https://whois-api.com/?domain={domain}", timeout=10)
@@ -425,32 +463,38 @@ def domain_report(domain):
                 "Истекает": w_data.get('expiration_date', 'Н/Д')
             }
     except:
-        data["📋 WHOIS"] = {"Ошибка": "WHOIS недоступен"}
+        data["📋 WHOIS"] = {"Ошибка": "WHOIS сервис недоступен"}
     try:
         resp = requests.get(f"https://dns.google/resolve?name={domain}&type=A", timeout=5)
         if resp.status_code == 200:
             dns_data = resp.json()
             a_records = [ans['data'] for ans in dns_data.get('Answer', []) if ans.get('type') == 1]
             if a_records:
-                data["🌐 DNS A"] = a_records
+                data["🌐 DNS A записи"] = a_records
+            else:
+                data["🌐 DNS A записи"] = ["A записи не найдены"]
     except:
-        data["🌐 DNS A"] = ["Ошибка проверки"]
+        data["🌐 DNS A записи"] = ["Ошибка проверки DNS"]
     return data
 
 # ========== ОТЧЁТ ПО КРИПТОКОШЕЛЬКУ ==========
 def crypto_report(address):
     data = {"💰 Криптокошелёк": {"Адрес": address}}
+    
+    # Bitcoin
     if re.match(r'^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$', address):
         try:
             resp = requests.get(f"https://blockchain.info/balance?active={address}", timeout=10)
             if resp.status_code == 200:
                 balance = resp.json().get(address, {}).get('final_balance', 0) / 1e8
                 data["💰 Bitcoin"] = f"Баланс: {balance} BTC"
-                data["🔗 Ссылка"] = f"https://www.blockchain.com/btc/address/{address}"
+                data["🔗 Обозреватель"] = f"https://www.blockchain.com/btc/address/{address}"
             else:
                 data["💰 Bitcoin"] = "Ошибка получения баланса"
         except:
             data["💰 Bitcoin"] = "Сервис недоступен"
+    
+    # Ethereum
     elif re.match(r'^0x[a-fA-F0-9]{40}$', address):
         try:
             resp = requests.get(f"https://api.etherscan.io/api?module=account&action=balance&address={address}&tag=latest", timeout=10)
@@ -459,15 +503,15 @@ def crypto_report(address):
                 if result.get('status') == '1':
                     balance = int(result.get('result', 0)) / 1e18
                     data["💰 Ethereum"] = f"Баланс: {balance} ETH"
-                    data["🔗 Ссылка"] = f"https://etherscan.io/address/{address}"
+                    data["🔗 Обозреватель"] = f"https://etherscan.io/address/{address}"
                 else:
-                    data["💰 Ethereum"] = "Ошибка: " + result.get('message', 'Неизвестно')
+                    data["💰 Ethereum"] = f"Ошибка: {result.get('message', 'Неизвестно')}"
             else:
                 data["💰 Ethereum"] = "Ошибка API"
         except:
             data["💰 Ethereum"] = "Сервис недоступен"
     else:
-        data["🐸 Ошибка"] = "Неизвестный формат криптокошелька"
+        data["🐸 Ошибка"] = "Неизвестный формат криптокошелька (поддерживаются BTC и ETH)"
     return data
 
 # ========== КОМАНДЫ ==========
@@ -477,41 +521,73 @@ def start(message):
 """🐸 *PepeOSINT ULTIMATE* - твой жабье-сильный помощник
 
 📌 *Что умеет:*
-- Номер телефона - оператор, регион, утечки, спам
-- Username - поиск на 100+ сайтах (VK, TikTok, GitHub, форумы)
-- ФИО - поиск в соцсетях, генерация номеров
-- Email - Gravatar, утечки
-- VIN - декодинг (марка, модель, год)
-- IP - геолокация, провайдер
-- Домен - WHOIS, DNS, скриншот
-- Криптокошелёк - баланс BTC/ETH
+• *Номер телефона* - оператор, регион, утечки, спам
+• *Username* - поиск на 100+ сайтах (VK, TikTok, GitHub и др.)
+• *ФИО* - поиск в соцсетях, генерация номеров
+• *Email* - Gravatar, утечки
+• *VIN* - декодинг (марка, модель, год)
+• *IP* - геолокация, провайдер
+• *Домен* - WHOIS, DNS, скриншот
+• *Криптокошелёк* - баланс BTC/ETH
 
 ⚡ *Команды:*
-/nick username - поиск по нику на 100+ сайтах
-/art - арт девушки Пепе
+/start - показать это сообщение
+/nick <username> - поиск по нику на 100+ сайтах
+/art - показать арт девушки Пепе
 
-🐸 *Просто отправь:* номер, @username, email, ФИО, VIN, IP, домен, BTC/ETH
+🐸 *Просто отправь мне:*
+• Номер телефона: +7XXXXXXXXXX или 8XXXXXXXXXX
+• Username: @username
+• Email: name@example.com
+• ФИО: Иван Иванов
+• VIN: 17 символов
+• IP: 192.168.1.1
+• Домен: example.com
+• Криптокошелёк: BTC или ETH адрес
 
-Только открытые источники. Без API Telegram.""", parse_mode="Markdown")
+*Только открытые источники.*""", parse_mode="Markdown")
 
 @bot.message_handler(commands=['art'])
 def art(message):
-    art_url = "https://i.imgur.com/6b3jL9c.png"
+    # Рабочие ссылки на арты (обнови при необходимости)
+    art_urls = [
+        "https://i.imgur.com/6b3jL9c.png",
+        "https://i.pinimg.com/originals/9e/3a/6c/9e3a6c4b5c8d9e2f1a4b6c8d0e2f4a6b.jpg"
+    ]
+    
     try:
-        bot.send_photo(message.chat.id, art_url, caption="🐸 Девушка Пепе - хранительница болот")
-    except:
-        bot.send_message(message.chat.id, "🐸 Арт временно недоступен")
+        # Пробуем отправить как фото
+        bot.send_photo(message.chat.id, "https://i.imgur.com/6b3jL9c.png", 
+                      caption="🐸 Девушка Пепе — хранительница болотных тайн 🌿")
+    except Exception as e:
+        # Если фото недоступно, отправляем текстом
+        bot.send_message(message.chat.id, 
+"""🐸 *Девушка Пепе* 🌿
+
+Хранительница болотной мудрости говорит:
+«Каждая утечка данных — это след, который ведёт к истине... фр-фр»
+
+Попробуй найти её арт сам:
+https://i.imgur.com/6b3jL9c.png
+
+🐸 *Pepe всегда с тобой!*""", parse_mode="Markdown")
 
 @bot.message_handler(commands=['nick'])
 def nick_command(message):
     args = message.text.split(maxsplit=1)
     if len(args) < 2:
-        bot.reply_to(message, "🐸 Использование: /nick username")
+        bot.reply_to(message, "🐸 Использование: /nick username\nПример: /nick john_doe")
         return
     username = args[1].strip()
-    bot.send_message(message.chat.id, f"🐸 Ищу пользователя {username} на 100+ сайтах...")
+    status_msg = bot.send_message(message.chat.id, f"🐸 Ищу пользователя *{username}* на {len(SITES_DB)} сайтах...\n⏳ Это может занять до минуты", parse_mode="Markdown")
+    
     data = username_report(username)
     send_pepe_html(message.chat.id, "Username", username, data)
+    
+    try:
+        bot.delete_message(message.chat.id, status_msg.message_id)
+    except:
+        pass
 
 # ========== АВТООПРЕДЕЛЕНИЕ ==========
 @bot.message_handler(content_types=['text'])
@@ -520,65 +596,107 @@ def handle_text(message):
     if text.startswith('/'):
         return
     
+    # Username с @
     if text.startswith('@'):
         username = text[1:]
-        bot.send_message(message.chat.id, f"🐸 Ищу пользователя {username}...")
+        bot.send_message(message.chat.id, f"🐸 Ищу пользователя *{username}* на {len(SITES_DB)} сайтах...\n⏳ Это может занять до минуты", parse_mode="Markdown")
         data = username_report(username)
         send_pepe_html(message.chat.id, "Username", username, data)
         return
     
-    if re.match(r'^\+?\d{10,15}$', text):
-        data = phone_report(text)
-        if data:
-            send_pepe_html(message.chat.id, "Номер телефона", text, data)
+    # Номер телефона
+    if re.match(r'^[\+]?[0-9\s\-\(\)]{10,20}$', text):
+        cleaned = re.sub(r'[\s\-\(\)]', '', text)
+        if re.match(r'^\+?\d{10,15}$', cleaned):
+            data = phone_report(cleaned)
+            if data:
+                send_pepe_html(message.chat.id, "Номер телефона", text, data)
+            else:
+                bot.reply_to(message, "❌ Не удалось обработать номер")
         else:
-            bot.reply_to(message, "❌ Неверный номер")
+            bot.reply_to(message, "❌ Неверный формат номера")
         return
     
+    # Email
     if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', text):
+        bot.send_message(message.chat.id, f"🐸 Проверяю email *{text}*...", parse_mode="Markdown")
         data = email_report(text)
         send_pepe_html(message.chat.id, "Email", text, data)
         return
     
+    # VIN (17 символов, буквы и цифры, без I,O,Q)
     if re.match(r'^[A-HJ-NPR-Z0-9]{17}$', text, re.IGNORECASE):
+        bot.send_message(message.chat.id, f"🐸 Декодирую VIN *{text.upper()}*...", parse_mode="Markdown")
         data = vin_report(text.upper())
         if data:
             send_pepe_html(message.chat.id, "VIN", text.upper(), data)
         else:
-            bot.reply_to(message, "❌ Неверный VIN")
+            bot.reply_to(message, "❌ Неверный VIN код (должен быть 17 символов)")
         return
     
+    # IP-адрес
     if re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', text):
-        data = ip_report(text)
-        send_pepe_html(message.chat.id, "IP", text, data)
+        parts = text.split('.')
+        if all(0 <= int(p) <= 255 for p in parts):
+            bot.send_message(message.chat.id, f"🐸 Определяю геолокацию IP *{text}*...", parse_mode="Markdown")
+            data = ip_report(text)
+            send_pepe_html(message.chat.id, "IP-адрес", text, data)
+        else:
+            bot.reply_to(message, "❌ Неверный IP-адрес")
         return
     
-    if '.' in text and ' ' not in text and not text.startswith('http'):
-        data = domain_report(text)
-        send_pepe_html(message.chat.id, "Домен", text, data)
+    # Домен
+    if '.' in text and ' ' not in text and not text.startswith('http') and '/' not in text:
+        if len(text.split('.')) >= 2:
+            bot.send_message(message.chat.id, f"🐸 Анализирую домен *{text}*...", parse_mode="Markdown")
+            data = domain_report(text)
+            send_pepe_html(message.chat.id, "Домен", text, data)
+        else:
+            bot.reply_to(message, "❌ Неверный формат домена")
         return
     
+    # Криптокошелёк (BTC или ETH)
     if re.match(r'^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$', text) or re.match(r'^0x[a-fA-F0-9]{40}$', text):
+        bot.send_message(message.chat.id, f"🐸 Проверяю криптокошелёк *{text[:10]}...*", parse_mode="Markdown")
         data = crypto_report(text)
         send_pepe_html(message.chat.id, "Криптокошелёк", text, data)
         return
     
-    if len(text.split()) >= 2 and re.search(r'[А-Яа-я]', text):
+    # ФИО (минимум 2 слова, содержит русские буквы)
+    words = text.split()
+    if len(words) >= 2 and re.search(r'[А-Яа-я]', text):
+        bot.send_message(message.chat.id, f"🐸 Ищу информацию по ФИО *{text}*...", parse_mode="Markdown")
         data = fullname_report(text)
         if data:
             send_pepe_html(message.chat.id, "ФИО", text, data)
         else:
-            bot.reply_to(message, "❌ Введите имя и фамилию")
+            bot.reply_to(message, "❌ Введите имя и фамилию (минимум 2 слова)")
         return
     
-    bot.reply_to(message, "🐸 Не распознано. Отправьте: номер, @username, email, ФИО, VIN, IP, домен, BTC/ETH")
+    # Если ничего не подошло
+    bot.reply_to(message, 
+"""🐸 *Не распознан тип данных*
+
+Отправь один из форматов:
+• 📞 Номер: +7XXXXXXXXXX
+• 👤 Username: @username
+• 📧 Email: name@example.com
+• 👨 ФИО: Иван Иванов
+• 🚗 VIN: 17 символов
+• 🌐 IP: 192.168.1.1
+• 🏠 Домен: example.com
+• 💰 Крипто: BTC или ETH адрес
+
+Используй /help для справки""", parse_mode="Markdown")
 
 # ========== ЗАПУСК ==========
 if __name__ == "__main__":
     print("🐸 PepeOSINT ULTIMATE запущен. Жабья сила активирована!")
+    print(f"📊 Загружено сайтов для поиска: {len(SITES_DB)}")
+    print("🤖 Бот готов к работе...")
     while True:
         try:
             bot.infinity_polling(timeout=60, long_polling_timeout=60)
         except Exception as e:
-            print(f"Ошибка: {e}. Переподключение через 10 секунд...")
+            print(f"❌ Ошибка: {e}. Переподключение через 10 секунд...")
             time.sleep(10)
