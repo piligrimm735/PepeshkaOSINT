@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 # Загрузка переменных окружения
 load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.getenv("BOTIK_TOKEN")
 
 if not TOKEN:
     print("❌ КРИТИЧЕСКАЯ ОШИБКА: Токен BOT_TOKEN не найден в переменных окружения!")
